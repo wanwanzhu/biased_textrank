@@ -1,9 +1,9 @@
+import json
 from os import listdir
 from os.path import isfile, join
 
 import nltk
 import numpy as np
-import json
 from rouge import Rouge
 from scipy.spatial import distance
 from sentence_transformers import SentenceTransformer
@@ -22,7 +22,7 @@ def rescale(a):
     return (a - minimum) / (maximum - minimum)
 
 
-def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.80, similarity_threshold=0.8):
+def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.80, similarity_threshold=0.8, biased=True):
     # create text rank matrix, add edges between pieces that are more than X similar
     matrix = np.zeros((len(texts_embeddings), len(texts_embeddings)))
     for i, i_embedding in enumerate(texts_embeddings):
@@ -33,9 +33,12 @@ def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.80, simil
             if distance > similarity_threshold:
                 matrix[i][j] = distance
 
-    bias_weights = np.array([cosine(bias_embedding, embedding) for embedding in texts_embeddings])
-    bias_weights = rescale(bias_weights)
-    scaled_matrix = damping_factor * matrix + (1 - damping_factor) * bias_weights
+    if biased:
+        bias_weights = np.array([cosine(bias_embedding, embedding) for embedding in texts_embeddings])
+        bias_weights = rescale(bias_weights)
+        scaled_matrix = damping_factor * matrix + (1 - damping_factor) * bias_weights
+    else:
+        scaled_matrix = damping_factor * matrix + (1 - damping_factor) / len(matrix)
 
     for row in scaled_matrix:
         row /= np.sum(row)
@@ -43,7 +46,7 @@ def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.80, simil
 
     print('Calculating ranks...')
     ranks = np.ones((len(matrix), 1)) / len(matrix)
-    iterations = 40
+    iterations = 400
     for i in range(iterations):
         ranks = scaled_matrix.T.dot(ranks)
 
@@ -99,57 +102,77 @@ def main():
                                  filename in get_filenames_in_directory(republican_path)]
     transcripts = [{'filename': filename, 'content': load_text_file(transcript_path + filename)}
                    for filename in get_filenames_in_directory(transcript_path)]
-    # democrat_summaries = [{'filename': filename} for filename in get_filenames_in_directory(democrat_path)]
-    # republican_summaries = [{'filename': filename} for filename in get_filenames_in_directory(republican_path)]
-    # for i, transcript in enumerate(transcripts):
-    #     transcript_sentences = get_sentences(transcript['content'])
-    #     transcript_sentence_embeddings = [get_sbert_embedding(sentence) for sentence in transcript_sentences]
-    #     democratic_ranks = biased_textrank(transcript_sentence_embeddings, democratic_bias_embedding)
-    #     democrat_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, democratic_ranks, 20))
-    #     democrat_summaries[i]['content'] = democrat_summary
-    #     republican_ranks = biased_textrank(transcript_sentence_embeddings, republican_bias_embedding)
-    #     republican_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, republican_ranks, 20))
-    #     republican_summaries[i]['content'] = republican_summary
-    #
-    # # saving results
-    # with open('democrat_summaries.json', 'w') as f:
-    #     f.write(json.dumps(democrat_summaries))
-    # with open('republican_summaries.json', 'w') as f:
-    #     f.write(json.dumps(republican_summaries))
+    democrat_summaries = [{'filename': filename} for filename in get_filenames_in_directory(democrat_path)]
+    republican_summaries = [{'filename': filename} for filename in get_filenames_in_directory(republican_path)]
+    normal_summaries = [{'filename': filename} for filename in get_filenames_in_directory(transcript_path)]
+    for i, transcript in enumerate(transcripts):
+        transcript_sentences = get_sentences(transcript['content'])
+        transcript_sentence_embeddings = [get_sbert_embedding(sentence) for sentence in transcript_sentences]
+        democratic_ranks = biased_textrank(transcript_sentence_embeddings, democratic_bias_embedding)
+        democrat_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, democratic_ranks, 20))
+        democrat_summaries[i]['content'] = democrat_summary
+        republican_ranks = biased_textrank(transcript_sentence_embeddings, republican_bias_embedding)
+        republican_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, republican_ranks, 20))
+        republican_summaries[i]['content'] = republican_summary
+        normal_ranks = biased_textrank(transcript_sentence_embeddings, None, damping_factor=0.85, biased=False)
+        normal_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, normal_ranks, 20))
+        normal_summaries[i]['content'] = normal_summary
+
+    # saving results
+    with open('democrat_summaries.json', 'w') as f:
+        f.write(json.dumps(democrat_summaries))
+    with open('republican_summaries.json', 'w') as f:
+        f.write(json.dumps(republican_summaries))
+    with open('normal_summaries.json', 'w') as f:
+        f.write(json.dumps(normal_summaries))
 
     # load results
-    with open('democrat_summaries.json') as f:
-        democrat_summaries = json.load(f)
-    with open('republican_summaries.json') as f:
-        republican_summaries = json.load(f)
+    # with open('democrat_summaries.json') as f:
+    #     democrat_summaries = json.load(f)
+    # with open('republican_summaries.json') as f:
+    #     republican_summaries = json.load(f)
 
     # evaluation
     democrat_rouge_scores = calculate_rouge_score(democrat_gold_standards, democrat_summaries)
     print('Democrat Results:')
-    print('Average ROUGE-1: {}'.format(np.mean(democrat_rouge_scores['rouge-1'])))
-    print('Average ROUGE-2: {}'.format(np.mean(democrat_rouge_scores['rouge-2'])))
-    print('Average ROUGE-l: {}'.format(np.mean(democrat_rouge_scores['rouge-l'])))
-    print('############################')
-
-    republican_rouge_scores = calculate_rouge_score(republican_gold_standards, republican_summaries)
-    print('Republican Results:')
-    print('Average ROUGE-1: {}'.format(np.mean(republican_rouge_scores['rouge-1'])))
-    print('Average ROUGE-2: {}'.format(np.mean(republican_rouge_scores['rouge-2'])))
-    print('Average ROUGE-l: {}'.format(np.mean(republican_rouge_scores['rouge-l'])))
-    print('############################')
-
-    democrat_rouge_scores = calculate_rouge_score(republican_gold_standards, democrat_summaries)
-    print('Democrat Results against Republican Gold Standard:')
-    print('Average ROUGE-1: {}'.format(np.mean(democrat_rouge_scores['rouge-1'])))
-    print('Average ROUGE-2: {}'.format(np.mean(democrat_rouge_scores['rouge-2'])))
-    print('Average ROUGE-l: {}'.format(np.mean(democrat_rouge_scores['rouge-l'])))
+    print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(democrat_rouge_scores['rouge-1']),
+                                                         np.mean(democrat_rouge_scores['rouge-2']),
+                                                         np.mean(democrat_rouge_scores['rouge-l'])))
     print('############################')
 
     republican_rouge_scores = calculate_rouge_score(democrat_gold_standards, republican_summaries)
     print('Republican Results against Democrat Gold Standard:')
-    print('Average ROUGE-1: {}'.format(np.mean(republican_rouge_scores['rouge-1'])))
-    print('Average ROUGE-2: {}'.format(np.mean(republican_rouge_scores['rouge-2'])))
-    print('Average ROUGE-l: {}'.format(np.mean(republican_rouge_scores['rouge-l'])))
+    print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(republican_rouge_scores['rouge-1']),
+                                                         np.mean(republican_rouge_scores['rouge-2']),
+                                                         np.mean(republican_rouge_scores['rouge-l'])))
+    print('############################')
+
+    normal_rouge_scores = calculate_rouge_score(democrat_gold_standards, normal_summaries)
+    print('Normal Results against Democrat Gold Standard:')
+    print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(normal_rouge_scores['rouge-1']),
+                                                         np.mean(normal_rouge_scores['rouge-2']),
+                                                         np.mean(normal_rouge_scores['rouge-l'])))
+    print('############################')
+
+    republican_rouge_scores = calculate_rouge_score(republican_gold_standards, republican_summaries)
+    print('Republican Results:')
+    print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(republican_rouge_scores['rouge-1']),
+                                                         np.mean(republican_rouge_scores['rouge-2']),
+                                                         np.mean(republican_rouge_scores['rouge-l'])))
+    print('############################')
+
+    democrat_rouge_scores = calculate_rouge_score(republican_gold_standards, democrat_summaries)
+    print('Democrat Results against Republican Gold Standard:')
+    print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(democrat_rouge_scores['rouge-1']),
+                                                         np.mean(democrat_rouge_scores['rouge-2']),
+                                                         np.mean(democrat_rouge_scores['rouge-l'])))
+    print('############################')
+
+    normal_rouge_scores = calculate_rouge_score(republican_gold_standards, normal_summaries)
+    print('Normal Results against Republican Gold Standard:')
+    print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(normal_rouge_scores['rouge-1']),
+                                                         np.mean(normal_rouge_scores['rouge-2']),
+                                                         np.mean(normal_rouge_scores['rouge-l'])))
     print('############################')
 
 
