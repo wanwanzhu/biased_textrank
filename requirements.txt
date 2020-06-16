@@ -4,3 +4,4 @@ gensim
 nltk
 scipy
 numpy
+rouge
