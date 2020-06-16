@@ -109,7 +109,7 @@ def main():
         if len(democrat_gold_standards[i]['content']) == 0 and len(republican_gold_standards[i]['content']) == 0:
             continue
         transcript_sentences = get_sentences(transcript['content'])
-        transcript_sentence_embeddings = [get_sbert_embedding(sentence) for sentence in transcript_sentences]
+        transcript_sentence_embeddings = get_sbert_embedding(transcript_sentences)
         democratic_ranks = biased_textrank(transcript_sentence_embeddings, democratic_bias_embedding)
         democrat_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, democratic_ranks, 20))
         democrat_summaries[i]['content'] = democrat_summary
