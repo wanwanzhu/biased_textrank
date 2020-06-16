@@ -108,15 +108,18 @@ def main():
     for i, transcript in enumerate(transcripts):
         transcript_sentences = get_sentences(transcript['content'])
         transcript_sentence_embeddings = [get_sbert_embedding(sentence) for sentence in transcript_sentences]
-        democratic_ranks = biased_textrank(transcript_sentence_embeddings, democratic_bias_embedding)
-        democrat_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, democratic_ranks, 20))
-        democrat_summaries[i]['content'] = democrat_summary
-        republican_ranks = biased_textrank(transcript_sentence_embeddings, republican_bias_embedding)
-        republican_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, republican_ranks, 20))
-        republican_summaries[i]['content'] = republican_summary
-        normal_ranks = biased_textrank(transcript_sentence_embeddings, None, damping_factor=0.85, biased=False)
-        normal_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, normal_ranks, 20))
-        normal_summaries[i]['content'] = normal_summary
+        if len(democrat_gold_standards[i]['content']) != 0:
+            democratic_ranks = biased_textrank(transcript_sentence_embeddings, democratic_bias_embedding)
+            democrat_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, democratic_ranks, 20))
+            democrat_summaries[i]['content'] = democrat_summary
+        if len(republican_gold_standards[i]['content']) != 0:
+            republican_ranks = biased_textrank(transcript_sentence_embeddings, republican_bias_embedding)
+            republican_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, republican_ranks, 20))
+            republican_summaries[i]['content'] = republican_summary
+        if len(republican_gold_standards[i]['content']) != 0 or len(democrat_gold_standards[i]['content']) != 0:
+            normal_ranks = biased_textrank(transcript_sentence_embeddings, None, damping_factor=0.85, biased=False)
+            normal_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, normal_ranks, 20))
+            normal_summaries[i]['content'] = normal_summary
 
     # saving results
     with open('democrat_summaries.json', 'w') as f:
