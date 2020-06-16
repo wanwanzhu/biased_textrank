@@ -46,7 +46,7 @@ def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.80, simil
 
     print('Calculating ranks...')
     ranks = np.ones((len(matrix), 1)) / len(matrix)
-    iterations = 400
+    iterations = 120
     for i in range(iterations):
         ranks = scaled_matrix.T.dot(ranks)
 
