@@ -22,7 +22,7 @@ def rescale(a):
     return (a - minimum) / (maximum - minimum)
 
 
-def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.80, similarity_threshold=0.8, biased=True):
+def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.8, similarity_threshold=0.8, biased=True):
     # create text rank matrix, add edges between pieces that are more than X similar
     matrix = np.zeros((len(texts_embeddings), len(texts_embeddings)))
     for i, i_embedding in enumerate(texts_embeddings):
@@ -33,24 +33,33 @@ def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.80, simil
             if distance > similarity_threshold:
                 matrix[i][j] = distance
 
+    matrix = normalize(matrix)
+
     if biased:
         bias_weights = np.array([cosine(bias_embedding, embedding) for embedding in texts_embeddings])
         bias_weights = rescale(bias_weights)
         scaled_matrix = damping_factor * matrix + (1 - damping_factor) * bias_weights
     else:
-        scaled_matrix = damping_factor * matrix + (1 - damping_factor) / len(matrix)
+        scaled_matrix = damping_factor * matrix + (1 - damping_factor)
 
-    for row in scaled_matrix:
-        row /= np.sum(row)
+    scaled_matrix = normalize(scaled_matrix)
     # scaled_matrix = rescale(scaled_matrix)
 
     print('Calculating ranks...')
     ranks = np.ones((len(matrix), 1)) / len(matrix)
-    iterations = 40
+    iterations = 80
     for i in range(iterations):
         ranks = scaled_matrix.T.dot(ranks)
 
     return ranks
+
+
+def normalize(matrix):
+    for row in matrix:
+        row_sum = np.sum(row)
+        if row_sum != 0:
+            row /= row_sum
+    return matrix
 
 
 def get_sbert_embedding(text):
@@ -61,7 +70,10 @@ def get_sbert_embedding(text):
 
 
 def get_sentences(text):
-    sentences = nltk.sent_tokenize(text)
+    paragraphs = text.split('\n\n')
+    sentences = []
+    for paragraph in paragraphs:
+        sentences += nltk.sent_tokenize(paragraph)
     sentences = [s for s in sentences if s and not s.isspace()]
     return sentences
 
@@ -116,7 +128,7 @@ def main():
         republican_ranks = biased_textrank(transcript_sentence_embeddings, republican_bias_embedding)
         republican_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, republican_ranks, 20))
         republican_summaries[i]['content'] = republican_summary
-        normal_ranks = biased_textrank(transcript_sentence_embeddings, None, damping_factor=0.85, biased=False)
+        normal_ranks = biased_textrank(transcript_sentence_embeddings, None, damping_factor=0.9, biased=False)
         normal_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, normal_ranks, 20))
         normal_summaries[i]['content'] = normal_summary
 
@@ -129,9 +141,9 @@ def main():
         f.write(json.dumps(normal_summaries))
 
     # load results
-    # with open('../democrat_summaries.json') as f:
+    # with open('democrat_summaries.json') as f:
     #     democrat_summaries = json.load(f)
-    # with open('../republican_summaries.json') as f:
+    # with open('republican_summaries.json') as f:
     #     republican_summaries = json.load(f)
     # with open('../normal_summaries.json') as f:
     #     normal_summaries = json.load(f)
