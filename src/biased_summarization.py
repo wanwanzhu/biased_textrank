@@ -7,6 +7,7 @@ import numpy as np
 from rouge import Rouge
 from scipy.spatial import distance
 from sentence_transformers import SentenceTransformer
+from biases import democratic_bias, republican_bias
 
 sbert = SentenceTransformer('bert-base-nli-mean-tokens')
 rouge = Rouge()
@@ -100,9 +101,7 @@ def select_top_k_texts_preserving_order(texts, ranking, k):
 
 
 def main():
-    democratic_bias = '''The Democratic Party's philosophy of modern liberalism advocates social and economic equality, along with the welfare state. It seeks to provide government regulation in the economy to promote the public interest. Environmental protection, support for organized labor, maintenance and expansion of social programs, affordable college tuition, universal health care, equal opportunity, and consumer protection form the core of the party's economic policy. On social issues, it advocates campaign finance reform, LGBT rights, criminal justice and immigration reform, stricter gun laws, and the legalization of marijuana.'''
     democratic_bias_embedding = get_sbert_embedding(democratic_bias)
-    republican_bias = '''The 21st-century Republican Party ideology is American conservatism, which incorporates both economic policies and social values. The GOP supports lower taxes, free market capitalism, restrictions on immigration, increased military spending, gun rights, restrictions on abortion, deregulation and restrictions on labor unions. After the Supreme Court's 1973 decision in Roe v. Wade, the Republican Party opposed abortion in its party platform and grew its support among evangelicals. The GOP was strongly committed to protectionism and tariffs at its founding but grew more supportive of free trade in the 20th century.'''
     republican_bias_embedding = get_sbert_embedding(republican_bias)
     data_path = '../data/us-presidential-debates/'
     democrat_path = data_path + 'democrat/'
@@ -117,11 +116,19 @@ def main():
     democrat_summaries = [{'filename': filename} for filename in get_filenames_in_directory(democrat_path)]
     republican_summaries = [{'filename': filename} for filename in get_filenames_in_directory(republican_path)]
     normal_summaries = [{'filename': filename} for filename in get_filenames_in_directory(transcript_path)]
+    sentences_and_embeddings = []
     for i, transcript in enumerate(transcripts):
         if len(democrat_gold_standards[i]['content']) == 0 and len(republican_gold_standards[i]['content']) == 0:
             continue
         transcript_sentences = get_sentences(transcript['content'])
         transcript_sentence_embeddings = get_sbert_embedding(transcript_sentences)
+        sentences_and_embeddings.append(
+            {
+                'filename': transcript['filename'],
+                'sentences': transcript_sentences,
+                'embeddings': [embedding.tolist() for embedding in transcript_sentence_embeddings]
+            }
+        )
         democratic_ranks = biased_textrank(transcript_sentence_embeddings, democratic_bias_embedding)
         democrat_summary = ' '.join(select_top_k_texts_preserving_order(transcript_sentences, democratic_ranks, 20))
         democrat_summaries[i]['content'] = democrat_summary
@@ -139,6 +146,8 @@ def main():
         f.write(json.dumps(republican_summaries))
     with open('normal_summaries.json', 'w') as f:
         f.write(json.dumps(normal_summaries))
+    with open('sentence_and_embeddings_checkpoints.json', 'w') as f:
+        f.write(json.dumps(sentences_and_embeddings))
 
     # load results
     # with open('democrat_summaries.json') as f:
