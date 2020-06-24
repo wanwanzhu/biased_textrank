@@ -1,4 +1,6 @@
 import json
+from distutils.command.clean import clean
+
 import nltk
 from biased_summarization import select_top_k_texts_preserving_order, biased_textrank, get_sbert_embedding
 from rouge import Rouge
@@ -114,10 +116,10 @@ def get_liar_data(split):
     return liar_data
 
 
-def generate_textrank_explanations():
-    test_set = get_liar_data('test')
+def generate_textrank_explanations(split):
+    dataset = get_liar_data(split)
 
-    for claim in test_set:
+    for claim in dataset:
         statements = get_sentences(claim['statements'])
         statements_embeddings = get_sbert_embedding(statements)
         bias = claim['claim']
@@ -125,21 +127,21 @@ def generate_textrank_explanations():
         ranking = biased_textrank(statements_embeddings, bias_embedding)
         claim['generated_justification_biased'] = ' '.join(select_top_k_texts_preserving_order(statements, ranking, 4))
 
-    print('saving generated {} set file...'.format('test'))
-    with open('../data/liar/clean_{}.json'.format('test'), 'w') as f:
-        f.write(json.dumps(test_set))
+    print('saving generated {} set file...'.format(split))
+    with open('../data/liar/clean_{}.json'.format(split), 'w') as f:
+        f.write(json.dumps(dataset))
 
 
-def evaluate_generated_explanations():
-    test_set = get_liar_data('test')
-    print(len(test_set))
-    test_set = [claim for claim in test_set if len(get_sentences(claim['statements'])) > 3]
-    print(len(test_set))
+def evaluate_generated_explanations(split):
+    dataset = get_liar_data(split)
+    print(len(dataset))
+    dataset = [claim for claim in dataset if len(get_sentences(claim['statements'])) > 3]
+    print(len(dataset))
 
     rouge1 = []
     rouge2 = []
     rougel = []
-    for claim in test_set:
+    for claim in dataset:
         reference = claim['new_justification']
         explanation = claim['generated_justification_biased']
         score = rouge.get_scores(explanation, reference)
@@ -153,5 +155,6 @@ def evaluate_generated_explanations():
 
 
 if __name__ == "__main__":
-    generate_textrank_explanations()
-    evaluate_generated_explanations()
+    generate_textrank_explanations('val')
+    evaluate_generated_explanations('val')
+    # clean_liar_data('val')
