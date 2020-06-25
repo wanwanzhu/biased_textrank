@@ -2,7 +2,7 @@ import json
 from distutils.command.clean import clean
 
 import nltk
-from biased_summarization import select_top_k_texts_preserving_order, biased_textrank, get_sbert_embedding
+from biased_summarization import select_top_k_texts_preserving_order, biased_textrank, get_sbert_embedding, biased_textrank_ablation
 from rouge import Rouge
 import numpy as np
 
@@ -134,9 +134,7 @@ def generate_textrank_explanations(split):
 
 def evaluate_generated_explanations(split):
     dataset = get_liar_data(split)
-    print(len(dataset))
     dataset = [claim for claim in dataset if len(get_sentences(claim['statements'])) > 3]
-    print(len(dataset))
 
     rouge1 = []
     rouge2 = []
@@ -154,7 +152,44 @@ def evaluate_generated_explanations(split):
     print('Average ROUGE-l: {}'.format(np.mean(rougel)))
 
 
+def ablation_study(split):
+    dataset = get_liar_data(split)
+
+    damping_factors = [0.8, 0.85, 0.9]
+    similarity_thresholds = [0.7, 0.75, 0.8, 0.85, 0.9]
+
+    summaries = [{}] * len(dataset)
+    for i, claim in enumerate(dataset):
+        statements = get_sentences(claim['statements'])
+        statements_embeddings = get_sbert_embedding(statements)
+        bias = claim['claim']
+        bias_embedding = get_sbert_embedding(bias)
+        ranking = biased_textrank_ablation(statements_embeddings, bias_embedding, damping_factors=damping_factors, similarity_thresholds=similarity_thresholds)
+        for similarity_threshold in similarity_thresholds:
+            summaries[i][similarity_threshold] = {}
+            for damping_factor in damping_factors:
+                _ranking = ranking[similarity_threshold][damping_factor]
+                summaries[i][similarity_threshold][damping_factor] = ' '.join(select_top_k_texts_preserving_order(statements, _ranking, 4))
+
+    for similarity_threshold in similarity_thresholds:
+        for damping_factor in damping_factors:
+            rouge1 = []
+            rouge2 = []
+            rougel = []
+            for i, claim in enumerate(dataset):
+                reference = claim['new_justification']
+                explanation = summaries[i][similarity_threshold][damping_factor]
+                score = rouge.get_scores(explanation, reference)
+                rouge1.append(score[0]['rouge-1']['f'])
+                rouge2.append(score[0]['rouge-2']['f'])
+                rougel.append(score[0]['rouge-l']['f'])
+
+            print('Similarity Threshold={}, Damping Factor={}'.format(similarity_threshold, damping_factor))
+            print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-L: {}'.format(np.mean(rouge1), np.mean(rouge2), np.mean(rougel)))
+            print('############################')
+
+
 if __name__ == "__main__":
-    generate_textrank_explanations('val')
-    evaluate_generated_explanations('val')
-    # clean_liar_data('val')
+    # generate_textrank_explanations('val')
+    # evaluate_generated_explanations('val')
+    ablation_study('val')
