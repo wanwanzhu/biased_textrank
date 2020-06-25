@@ -28,20 +28,14 @@ def rescale(a):
 
 
 def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.8, similarity_threshold=0.8, biased=True):
-    # create text rank matrix, add edges between pieces that are more than X similar
-    matrix = np.zeros((len(texts_embeddings), len(texts_embeddings)))
-    for i, i_embedding in enumerate(texts_embeddings):
-        for j, j_embedding in enumerate(texts_embeddings):
-            if i == j:
-                continue
-            distance = cosine(i_embedding, j_embedding)
-            if distance > similarity_threshold:
-                matrix[i][j] = distance
+    matrix = vcosine(texts_embeddings, texts_embeddings)
+    np.fill_diagonal(matrix, 0)
+    matrix[matrix < similarity_threshold] = 0
 
     matrix = normalize(matrix)
 
     if biased:
-        bias_weights = np.array([cosine(bias_embedding, embedding) for embedding in texts_embeddings])
+        bias_weights = vcosine(bias_embedding, texts_embeddings)
         bias_weights = rescale(bias_weights)
         scaled_matrix = damping_factor * matrix + (1 - damping_factor) * bias_weights
     else:
@@ -259,7 +253,7 @@ def ablation_study():
 
     with open('sentence_and_embeddings_checkpoints.json') as f:
         sentences_and_embeddings = json.load(f)
-    sentences_and_embeddings = sentences_and_embeddings[:1]
+    # sentences_and_embeddings = sentences_and_embeddings[:1]
 
     for item in sentences_and_embeddings:
         item['embeddings'] = np.array(item['embeddings'])
