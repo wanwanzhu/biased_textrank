@@ -4,10 +4,10 @@ from os.path import isfile, join
 
 import nltk
 import numpy as np
+from biases import democratic_bias, republican_bias
 from rouge import Rouge
 from scipy.spatial import distance
 from sentence_transformers import SentenceTransformer
-from biases import democratic_bias, republican_bias
 
 sbert = SentenceTransformer('bert-base-nli-mean-tokens')
 rouge = Rouge()
@@ -51,6 +51,42 @@ def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.8, simila
     iterations = 80
     for i in range(iterations):
         ranks = scaled_matrix.T.dot(ranks)
+
+    return ranks
+
+
+def biased_textrank_ablation(texts_embeddings, bias_embedding, damping_factors=[0.8, 0.85, 0.9],
+                             similarity_thresholds=[0.7, 0.75, 0.8, 0.85, 0.9]):
+    # create text rank matrix, add edges between pieces that are more than X similar
+    main_matrix = np.zeros((len(texts_embeddings), len(texts_embeddings)))
+    for i, i_embedding in enumerate(texts_embeddings):
+        for j, j_embedding in enumerate(texts_embeddings):
+            if i == j:
+                continue
+            main_matrix[i][j] = cosine(i_embedding, j_embedding)
+
+    bias_weights = np.array([cosine(bias_embedding, embedding) for embedding in texts_embeddings])
+    bias_weights = rescale(bias_weights)
+
+    ranks = {}
+    for similarity_threshold in similarity_thresholds:
+        if similarity_threshold not in ranks:
+            ranks[similarity_threshold] = {}
+        matrix = main_matrix.copy()
+        # removing edges that don't pass the similarity threshold
+        matrix[matrix < similarity_threshold] = 0
+        matrix = normalize(matrix)
+        for damping_factor in damping_factors:
+            scaled_matrix = damping_factor * matrix + (1 - damping_factor) * bias_weights
+            scaled_matrix = normalize(scaled_matrix)
+
+            print('Calculating ranks for sim thresh {} damping {}'.format(similarity_threshold, damping_factor))
+            _ranks = np.ones((len(matrix), 1)) / len(matrix)
+            iterations = 80
+            for i in range(iterations):
+                _ranks = scaled_matrix.T.dot(_ranks)
+
+            ranks[similarity_threshold][damping_factor] = _ranks
 
     return ranks
 
@@ -101,18 +137,11 @@ def select_top_k_texts_preserving_order(texts, ranking, k):
 
 
 def main():
-    democratic_bias_embedding = get_sbert_embedding(democratic_bias)
-    republican_bias_embedding = get_sbert_embedding(republican_bias)
-    data_path = '../data/us-presidential-debates/'
-    democrat_path = data_path + 'democrat/'
-    republican_path = data_path + 'republican/'
-    transcript_path = data_path + 'transcripts/'
-    democrat_gold_standards = [{'filename': filename, 'content': load_text_file(democrat_path + filename)} for filename
-                               in get_filenames_in_directory(democrat_path)]
-    republican_gold_standards = [{'filename': filename, 'content': load_text_file(republican_path + filename)} for
-                                 filename in get_filenames_in_directory(republican_path)]
-    transcripts = [{'filename': filename, 'content': load_text_file(transcript_path + filename)}
-                   for filename in get_filenames_in_directory(transcript_path)]
+    democratic_bias_embedding, republican_bias_embedding = get_bias_embeddings()
+    democrat_path, republican_path, transcript_path = get_data_paths()
+    democrat_gold_standards, republican_gold_standards, transcripts = load_ground_truth_data(democrat_path,
+                                                                                             republican_path,
+                                                                                             transcript_path)
     democrat_summaries = [{'filename': filename} for filename in get_filenames_in_directory(democrat_path)]
     republican_summaries = [{'filename': filename} for filename in get_filenames_in_directory(republican_path)]
     normal_summaries = [{'filename': filename} for filename in get_filenames_in_directory(transcript_path)]
@@ -201,6 +230,83 @@ def main():
     print('############################')
 
 
+def load_ground_truth_data(democrat_path, republican_path, transcript_path):
+    democrat_gold_standards = [{'filename': filename, 'content': load_text_file(democrat_path + filename)} for filename
+                               in get_filenames_in_directory(democrat_path)]
+    republican_gold_standards = [{'filename': filename, 'content': load_text_file(republican_path + filename)} for
+                                 filename in get_filenames_in_directory(republican_path)]
+    transcripts = [{'filename': filename, 'content': load_text_file(transcript_path + filename)}
+                   for filename in get_filenames_in_directory(transcript_path)]
+    return democrat_gold_standards, republican_gold_standards, transcripts
+
+
+def get_data_paths():
+    data_path = '../data/us-presidential-debates/'
+    democrat_path = data_path + 'democrat/'
+    republican_path = data_path + 'republican/'
+    transcript_path = data_path + 'transcripts/'
+    return democrat_path, republican_path, transcript_path
+
+
+def get_bias_embeddings():
+    democratic_bias_embedding = get_sbert_embedding(democratic_bias)
+    republican_bias_embedding = get_sbert_embedding(republican_bias)
+    return democratic_bias_embedding, republican_bias_embedding
+
+
+def ablation_study():
+    democratic_bias_embedding, republican_bias_embedding = get_bias_embeddings()
+
+    with open('sentence_and_embeddings_checkpoints.json') as f:
+        sentences_and_embeddings = json.load(f)
+    sentences_and_embeddings = sentences_and_embeddings[:1]
+
+    damping_factors = [0.8, 0.85, 0.9]
+    similarity_thresholds = [0.7, 0.75, 0.8, 0.85, 0.9]
+
+    democratic_summaries = [{'filename': item['filename']} for item in sentences_and_embeddings]
+    republican_summaries = [{'filename': item['filename']} for item in sentences_and_embeddings]
+
+    for i, item in enumerate(sentences_and_embeddings):
+        sentences = item['sentences']
+        embeddings = item['embeddings']
+        democratic_summaries[i]['content'] = {}
+        republican_summaries[i]['content'] = {}
+        democratic_ranks = biased_textrank_ablation(embeddings, democratic_bias_embedding, damping_factors=damping_factors, similarity_thresholds=similarity_thresholds)
+        republican_ranks = biased_textrank_ablation(embeddings, republican_bias_embedding, damping_factors=damping_factors, similarity_thresholds=similarity_thresholds)
+        for similarity_threshold in similarity_thresholds:
+            democratic_summaries[i]['content'][similarity_threshold] = {}
+            republican_summaries[i]['content'][similarity_threshold] = {}
+            for damping_factor in damping_factors:
+                _democratic_ranks = democratic_ranks[similarity_threshold][damping_factor]
+                democratic_summaries[i]['content'][similarity_threshold][damping_factor] = ' '.join(select_top_k_texts_preserving_order(sentences, _democratic_ranks, 20))
+                _republican_ranks = republican_ranks[similarity_threshold][damping_factor]
+                republican_summaries[i]['content'][similarity_threshold][damping_factor] = ' '.join(select_top_k_texts_preserving_order(sentences, _republican_ranks, 20))
+
+    democrat_path, republican_path, transcript_path = get_data_paths()
+    democrat_gold_standards, republican_gold_standards, transcripts = load_ground_truth_data(democrat_path,
+                                                                                             republican_path,
+                                                                                             transcript_path)
+
+    for similarity_threshold in similarity_thresholds:
+        for damping_factor in damping_factors:
+            dem_summaries = [{'filename': item['filename'], 'content': item[similarity_threshold][damping_factor]} for item in democratic_summaries]
+            rep_summaries = [{'filename': item['filename'], 'content': item[similarity_threshold][damping_factor]} for item in republican_summaries]
+            democrat_rouge_scores = calculate_rouge_score(democrat_gold_standards, dem_summaries)
+            print('Democrat Results:')
+            print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(democrat_rouge_scores['rouge-1']),
+                                                                 np.mean(democrat_rouge_scores['rouge-2']),
+                                                                 np.mean(democrat_rouge_scores['rouge-l'])))
+            print('############################')
+
+            republican_rouge_scores = calculate_rouge_score(republican_gold_standards, rep_summaries)
+            print('Republican Results:')
+            print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(republican_rouge_scores['rouge-1']),
+                                                                 np.mean(republican_rouge_scores['rouge-2']),
+                                                                 np.mean(republican_rouge_scores['rouge-l'])))
+            print('############################')
+
+
 def calculate_rouge_score(gold_standards, summaries):
     democrat_rouge_scores = {
         'rouge-1': [],
@@ -220,4 +326,4 @@ def calculate_rouge_score(gold_standards, summaries):
 
 
 if __name__ == '__main__':
-    main()
+    ablation_study()
