@@ -290,8 +290,8 @@ def ablation_study():
 
     for similarity_threshold in similarity_thresholds:
         for damping_factor in damping_factors:
-            dem_summaries = [{'filename': item['filename'], 'content': item[similarity_threshold][damping_factor]} for item in democratic_summaries]
-            rep_summaries = [{'filename': item['filename'], 'content': item[similarity_threshold][damping_factor]} for item in republican_summaries]
+            dem_summaries = [{'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for item in democratic_summaries]
+            rep_summaries = [{'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for item in republican_summaries]
             democrat_rouge_scores = calculate_rouge_score(democrat_gold_standards, dem_summaries)
             print('Democrat Results:')
             print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(democrat_rouge_scores['rouge-1']),
