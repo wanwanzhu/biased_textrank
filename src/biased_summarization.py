@@ -13,6 +13,10 @@ sbert = SentenceTransformer('bert-base-nli-mean-tokens')
 rouge = Rouge()
 
 
+def vcosine(u, v):
+    return abs(1 - distance.cdist(u, v, 'cosine'))
+
+
 def cosine(u, v):
     return abs(1 - distance.cosine(u, v))
 
@@ -57,15 +61,11 @@ def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.8, simila
 
 def biased_textrank_ablation(texts_embeddings, bias_embedding, damping_factors=[0.8, 0.85, 0.9],
                              similarity_thresholds=[0.7, 0.75, 0.8, 0.85, 0.9]):
-    # create text rank matrix, add edges between pieces that are more than X similar
-    main_matrix = np.zeros((len(texts_embeddings), len(texts_embeddings)))
-    for i, i_embedding in enumerate(texts_embeddings):
-        for j, j_embedding in enumerate(texts_embeddings):
-            if i == j:
-                continue
-            main_matrix[i][j] = cosine(i_embedding, j_embedding)
 
-    bias_weights = np.array([cosine(bias_embedding, embedding) for embedding in texts_embeddings])
+    main_matrix = vcosine(texts_embeddings, texts_embeddings)
+    np.fill_diagonal(main_matrix, 0)
+
+    bias_weights = vcosine(bias_embedding, texts_embeddings)
     bias_weights = rescale(bias_weights)
 
     ranks = {}
@@ -261,6 +261,9 @@ def ablation_study():
         sentences_and_embeddings = json.load(f)
     sentences_and_embeddings = sentences_and_embeddings[:1]
 
+    for item in sentences_and_embeddings:
+        item['embeddings'] = np.array(item['embeddings'])
+
     damping_factors = [0.8, 0.85, 0.9]
     similarity_thresholds = [0.7, 0.75, 0.8, 0.85, 0.9]
 
@@ -293,11 +296,11 @@ def ablation_study():
             dem_summaries = [{'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for item in democratic_summaries]
             rep_summaries = [{'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for item in republican_summaries]
             democrat_rouge_scores = calculate_rouge_score(democrat_gold_standards, dem_summaries)
+            print('Similarity Threshold={}, Damping Factor={}'.format(similarity_threshold, damping_factor))
             print('Democrat Results:')
             print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(democrat_rouge_scores['rouge-1']),
                                                                  np.mean(democrat_rouge_scores['rouge-2']),
                                                                  np.mean(democrat_rouge_scores['rouge-l'])))
-            print('############################')
 
             republican_rouge_scores = calculate_rouge_score(republican_gold_standards, rep_summaries)
             print('Republican Results:')
