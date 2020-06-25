@@ -158,7 +158,7 @@ def ablation_study(split):
     damping_factors = [0.8, 0.85, 0.9]
     similarity_thresholds = [0.7, 0.75, 0.8, 0.85, 0.9]
 
-    summaries = [{}] * len(dataset)
+    summaries = [{} for item in dataset]
     for i, claim in enumerate(dataset):
         statements = get_sentences(claim['statements'])
         statements_embeddings = get_sbert_embedding(statements)
