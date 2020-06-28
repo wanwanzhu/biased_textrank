@@ -55,7 +55,6 @@ def biased_textrank(texts_embeddings, bias_embedding, damping_factor=0.8, simila
 
 def biased_textrank_ablation(texts_embeddings, bias_embedding, damping_factors=[0.8, 0.85, 0.9],
                              similarity_thresholds=[0.7, 0.75, 0.8, 0.85, 0.9]):
-
     main_matrix = vcosine(texts_embeddings, texts_embeddings)
     np.fill_diagonal(main_matrix, 0)
 
@@ -269,16 +268,22 @@ def ablation_study():
         embeddings = item['embeddings']
         democratic_summaries[i]['content'] = {}
         republican_summaries[i]['content'] = {}
-        democratic_ranks = biased_textrank_ablation(embeddings, democratic_bias_embedding, damping_factors=damping_factors, similarity_thresholds=similarity_thresholds)
-        republican_ranks = biased_textrank_ablation(embeddings, republican_bias_embedding, damping_factors=damping_factors, similarity_thresholds=similarity_thresholds)
+        democratic_ranks = biased_textrank_ablation(embeddings, democratic_bias_embedding,
+                                                    damping_factors=damping_factors,
+                                                    similarity_thresholds=similarity_thresholds)
+        republican_ranks = biased_textrank_ablation(embeddings, republican_bias_embedding,
+                                                    damping_factors=damping_factors,
+                                                    similarity_thresholds=similarity_thresholds)
         for similarity_threshold in similarity_thresholds:
             democratic_summaries[i]['content'][similarity_threshold] = {}
             republican_summaries[i]['content'][similarity_threshold] = {}
             for damping_factor in damping_factors:
                 _democratic_ranks = democratic_ranks[similarity_threshold][damping_factor]
-                democratic_summaries[i]['content'][similarity_threshold][damping_factor] = ' '.join(select_top_k_texts_preserving_order(sentences, _democratic_ranks, 20))
+                democratic_summaries[i]['content'][similarity_threshold][damping_factor] = ' '.join(
+                    select_top_k_texts_preserving_order(sentences, _democratic_ranks, 20))
                 _republican_ranks = republican_ranks[similarity_threshold][damping_factor]
-                republican_summaries[i]['content'][similarity_threshold][damping_factor] = ' '.join(select_top_k_texts_preserving_order(sentences, _republican_ranks, 20))
+                republican_summaries[i]['content'][similarity_threshold][damping_factor] = ' '.join(
+                    select_top_k_texts_preserving_order(sentences, _republican_ranks, 20))
 
     democrat_path, republican_path, transcript_path = get_data_paths()
     democrat_gold_standards, republican_gold_standards, transcripts = load_ground_truth_data(democrat_path,
@@ -286,17 +291,23 @@ def ablation_study():
                                                                                              transcript_path)
 
     # saving results
-    with open('focused_summarization_ablation.json', 'w') as f:
-        all_results = {
-            'democrat': democratic_summaries,
-            'republican': republican_summaries
-        }
-        f.write(json.dumps(all_results))
+    # with open('focused_summarization_ablation.json', 'w') as f:
+    #     all_results = {
+    #         'democrat': democratic_summaries,
+    #         'republican': republican_summaries
+    #     }
+    #     f.write(json.dumps(all_results))
 
+    rouge_results = {}
     for similarity_threshold in similarity_thresholds:
+        rouge_results[similarity_threshold] = {}
         for damping_factor in damping_factors:
-            dem_summaries = [{'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for item in democratic_summaries]
-            rep_summaries = [{'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for item in republican_summaries]
+            dem_summaries = [
+                {'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for
+                item in democratic_summaries]
+            rep_summaries = [
+                {'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for
+                item in republican_summaries]
             democrat_rouge_scores = calculate_rouge_score(democrat_gold_standards, dem_summaries)
             print('Similarity Threshold={}, Damping Factor={}'.format(similarity_threshold, damping_factor))
             print('Democrat Results:')
@@ -304,12 +315,23 @@ def ablation_study():
                                                                  np.mean(democrat_rouge_scores['rouge-2']),
                                                                  np.mean(democrat_rouge_scores['rouge-l'])))
 
+            rouge_results[similarity_threshold][damping_factor]['democrat'] = [
+                np.mean(democrat_rouge_scores['rouge-1']), np.mean(democrat_rouge_scores['rouge-2']),
+                np.mean(democrat_rouge_scores['rouge-l'])]
+
             republican_rouge_scores = calculate_rouge_score(republican_gold_standards, rep_summaries)
             print('Republican Results:')
             print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-l: {}'.format(np.mean(republican_rouge_scores['rouge-1']),
                                                                  np.mean(republican_rouge_scores['rouge-2']),
                                                                  np.mean(republican_rouge_scores['rouge-l'])))
             print('############################')
+
+            rouge_results[similarity_threshold][damping_factor]['republican'] = [
+                np.mean(republican_rouge_scores['rouge-1']), np.mean(republican_rouge_scores['rouge-2']),
+                np.mean(republican_rouge_scores['rouge-l'])]
+
+    with open('focused_summarization_rouge.json', 'w') as f:
+        f.write(json.dumps(rouge_results))
 
 
 def calculate_rouge_score(gold_standards, summaries):

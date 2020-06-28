@@ -172,10 +172,12 @@ def ablation_study(split):
                 summaries[i][similarity_threshold][damping_factor] = ' '.join(select_top_k_texts_preserving_order(statements, _ranking, 4))
 
     # saving results
-    with open('explanation_generation_ablation.json', 'w') as f:
-        f.write(json.dumps(summaries))
+    # with open('explanation_generation_ablation.json', 'w') as f:
+    #     f.write(json.dumps(summaries))
 
+    rouge_results = {}
     for similarity_threshold in similarity_thresholds:
+        rouge_results[similarity_threshold] = {}
         for damping_factor in damping_factors:
             rouge1 = []
             rouge2 = []
@@ -188,9 +190,13 @@ def ablation_study(split):
                 rouge2.append(score[0]['rouge-2']['f'])
                 rougel.append(score[0]['rouge-l']['f'])
 
+            rouge_results[similarity_threshold][damping_factor] = [np.mean(rouge1), np.mean(rouge2), np.mean(rougel)]
             print('Similarity Threshold={}, Damping Factor={}'.format(similarity_threshold, damping_factor))
             print('ROUGE-1: {}, ROUGE-2: {}, ROUGE-L: {}'.format(np.mean(rouge1), np.mean(rouge2), np.mean(rougel)))
             print('############################')
+
+    with open('explanation_generation_rouge.json', 'w') as f:
+        f.write(json.dumps(rouge_results))
 
 
 if __name__ == "__main__":
