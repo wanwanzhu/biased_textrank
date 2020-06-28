@@ -302,6 +302,7 @@ def ablation_study():
     for similarity_threshold in similarity_thresholds:
         rouge_results[similarity_threshold] = {}
         for damping_factor in damping_factors:
+            rouge_results[similarity_threshold][damping_factor] = {}
             dem_summaries = [
                 {'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for
                 item in democratic_summaries]
