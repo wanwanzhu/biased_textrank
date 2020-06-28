@@ -171,6 +171,10 @@ def ablation_study(split):
                 _ranking = ranking[similarity_threshold][damping_factor]
                 summaries[i][similarity_threshold][damping_factor] = ' '.join(select_top_k_texts_preserving_order(statements, _ranking, 4))
 
+    # saving results
+    with open('explanation_generation_ablation.json', 'w') as f:
+        f.write(json.dumps(summaries))
+
     for similarity_threshold in similarity_thresholds:
         for damping_factor in damping_factors:
             rouge1 = []

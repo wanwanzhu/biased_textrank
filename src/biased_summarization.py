@@ -285,6 +285,14 @@ def ablation_study():
                                                                                              republican_path,
                                                                                              transcript_path)
 
+    # saving results
+    with open('focused_summarization_ablation.json', 'w') as f:
+        all_results = {
+            'democrat': democratic_summaries,
+            'republican': republican_summaries
+        }
+        f.write(json.dumps(all_results))
+
     for similarity_threshold in similarity_thresholds:
         for damping_factor in damping_factors:
             dem_summaries = [{'filename': item['filename'], 'content': item['content'][similarity_threshold][damping_factor]} for item in democratic_summaries]
