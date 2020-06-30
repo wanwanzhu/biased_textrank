@@ -155,8 +155,8 @@ def evaluate_generated_explanations(split):
 def ablation_study(split):
     dataset = get_liar_data(split)
 
-    damping_factors = [0.8, 0.85, 0.9]
-    similarity_thresholds = [0.7, 0.75, 0.8, 0.85, 0.9]
+    damping_factors = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+    similarity_thresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
 
     summaries = [{} for item in dataset]
     for i, claim in enumerate(dataset):
