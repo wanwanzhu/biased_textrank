@@ -68,7 +68,7 @@ def biased_textrank_ablation(texts_embeddings, bias_embedding, damping_factors=[
         matrix = main_matrix.copy()
         # removing edges that don't pass the similarity threshold
         matrix[matrix < similarity_threshold] = 0
-        matrix = normalize(matrix)
+        # matrix = normalize(matrix)
         for damping_factor in damping_factors:
             scaled_matrix = damping_factor * matrix + (1 - damping_factor) * bias_weights
             scaled_matrix = normalize(scaled_matrix)
