@@ -258,7 +258,7 @@ def ablation_study():
         item['embeddings'] = np.array(item['embeddings'])
 
     damping_factors = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
-    similarity_thresholds = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
+    similarity_thresholds = [0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9]
 
     democratic_summaries = [{'filename': item['filename']} for item in sentences_and_embeddings]
     republican_summaries = [{'filename': item['filename']} for item in sentences_and_embeddings]
@@ -280,10 +280,10 @@ def ablation_study():
             for damping_factor in damping_factors:
                 _democratic_ranks = democratic_ranks[similarity_threshold][damping_factor]
                 democratic_summaries[i]['content'][similarity_threshold][damping_factor] = ' '.join(
-                    select_top_k_texts_preserving_order(sentences, _democratic_ranks, 20))
+                    select_top_k_texts_preserving_order(sentences, _democratic_ranks, 30))
                 _republican_ranks = republican_ranks[similarity_threshold][damping_factor]
                 republican_summaries[i]['content'][similarity_threshold][damping_factor] = ' '.join(
-                    select_top_k_texts_preserving_order(sentences, _republican_ranks, 20))
+                    select_top_k_texts_preserving_order(sentences, _republican_ranks, 30))
 
     democrat_path, republican_path, transcript_path = get_data_paths()
     democrat_gold_standards, republican_gold_standards, transcripts = load_ground_truth_data(democrat_path,
