@@ -9,7 +9,7 @@ def main():
         summaries = json.load(f)
 
     damping_factors = ['0.8', '0.85', '0.9']
-    similarity_thresholds = ['0.7', '0.75', '0.8', '0.85', '0.9']
+    similarity_thresholds = ['0.6', '0.65', '0.7', '0.75', '0.8', '0.85', '0.9']
     fig, axs = plt.subplots(3, 3)
     fig.set_size_inches(12,8)
 
