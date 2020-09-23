@@ -142,5 +142,5 @@ def prepare_training_data_for_gpt2():
 if __name__ == '__main__':
     split = sys.argv[1] or ''
     prepare_training_data_for_gpt2()
-    # fine_tune_gpt2()
-    # generate_explanations_using_gpt2(split)
+    fine_tune_gpt2()
+    generate_explanations_using_gpt2(split)
