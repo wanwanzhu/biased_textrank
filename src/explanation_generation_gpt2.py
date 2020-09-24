@@ -36,7 +36,7 @@ def generate_explanation(article, question, session):
     while True:
         generated_explanations = gpt2.generate(session, prefix=generation_prefix, truncate='<|endoftext|>', length=80,
                                                include_prefix=False, temperature=temperature, return_as_list=True, batch_size=2,
-                                               nsamples=2)
+                                               nsamples=2, run_name='simple')
         for generated_explanation in generated_explanations:
             if generated_text_is_meaningful(generated_explanation, generation_prefix) or temperature >= 0.8:
                 print(generated_explanation)
@@ -55,7 +55,7 @@ def fine_tune_gpt2():
 def generate_explanations_using_gpt2(split):
     data_points_summarized = 0
     session = gpt2.start_tf_sess()
-    gpt2.load_gpt2(session, run_name='simple')
+    gpt2.load_gpt2(session, run_name='simple', multi_gpu=True)
     with open('../data/liar/clean_{}.json'.format(split)) as input_file:
         dataset = json.load(input_file)
     for claim_id, claim in enumerate(dataset):
@@ -104,7 +104,7 @@ def generate_explanations_using_gpt2(split):
         if claim_id % 20 == 0:  # bug fix for slow down in generation
             tf.reset_default_graph()
             session = gpt2.start_tf_sess()
-            gpt2.load_gpt2(session, run_name='simple')
+            gpt2.load_gpt2(session, run_name='simple', multi_gpu=True)
 
     tf.reset_default_graph()
 
