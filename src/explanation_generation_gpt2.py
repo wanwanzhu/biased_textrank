@@ -96,8 +96,8 @@ def generate_explanations_using_gpt2(split):
                 statements = statements_summary
                 summary_size -= 2
 
-        # with open('../data/liar/_{}.json'.format(split), 'w') as f:
-        #     f.write(json.dumps(dataset))
+        with open('../data/liar/_{}.json'.format(split), 'w') as f:
+            f.write(json.dumps(dataset))
         print('results for {} set saved. Data points summarized so far: {}'.format(split, data_points_summarized))
 
         # K.clear_session()
@@ -108,8 +108,8 @@ def generate_explanations_using_gpt2(split):
 
     tf.reset_default_graph()
 
-    # with open('../data/liar/_{}.json'.format(split), 'w') as f:
-    #     f.write(json.dumps(dataset))
+    with open('../data/liar/_{}.json'.format(split), 'w') as f:
+        f.write(json.dumps(dataset))
 
     print('all explanations generated, total summarized are: {}.'.format(data_points_summarized))
 
