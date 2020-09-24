@@ -8,11 +8,8 @@ from biases import democratic_bias, republican_bias
 from rouge import Rouge
 from scipy.spatial import distance
 from sentence_transformers import SentenceTransformer
-import torch
 
-device = torch.device('cuda:1')
-sbert = SentenceTransformer('bert-base-nli-mean-tokens')
-sbert = sbert.to(device)
+sbert = SentenceTransformer('bert-base-nli-mean-tokens', device='cuda:1')
 rouge = Rouge()
 
 

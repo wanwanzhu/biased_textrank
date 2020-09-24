@@ -8,7 +8,7 @@ from fuzzywuzzy import process
 import gpt_2_simple as gpt2
 import tensorflow as tf
 
-from biased_summarization import select_top_k_texts_preserving_order#, biased_textrank, get_sbert_embedding
+from biased_summarization import select_top_k_texts_preserving_order, biased_textrank, get_sbert_embedding
 from explanation_generation import get_sentences
 
 
@@ -84,15 +84,14 @@ def generate_explanations_using_gpt2(split):
                 if summary_size == 20:  # gotta make sure we only increment this once per article at most
                     data_points_summarized += 1
 
-                # print('Running biased textrank for item #{} ...'.format(claim_id))
+                print('Running biased textrank for item #{} ...'.format(claim_id))
                 statements_sentences = get_sentences(claim['statements'])
-                # statements_embeddings = get_sbert_embedding(statements_sentences)
-                # bias = claim['claim']
-                # bias_embedding = get_sbert_embedding(bias)
-                # ranking = biased_textrank(statements_embeddings, bias_embedding)
-                # print('Biased textrank completed.')
-                # top_sentences = select_top_k_texts_preserving_order(statements_sentences, ranking, summary_size)
-                top_sentences = select_top_k_texts_preserving_order(statements_sentences, random.sample(range(1000), len(statements_sentences)), summary_size)
+                statements_embeddings = get_sbert_embedding(statements_sentences)
+                bias = claim['claim']
+                bias_embedding = get_sbert_embedding(bias)
+                ranking = biased_textrank(statements_embeddings, bias_embedding)
+                print('Biased textrank completed.')
+                top_sentences = select_top_k_texts_preserving_order(statements_sentences, ranking, summary_size)
                 statements_summary = ' '.join(top_sentences)
                 statements = statements_summary
                 summary_size -= 2
