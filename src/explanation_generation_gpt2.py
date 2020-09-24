@@ -55,7 +55,7 @@ def fine_tune_gpt2():
 def generate_explanations_using_gpt2(split):
     data_points_summarized = 0
     session = gpt2.start_tf_sess()
-    gpt2.load_gpt2(session, run_name='simple', multi_gpu=True)
+    gpt2.load_gpt2(session, run_name='simple')
     with open('../data/liar/clean_{}.json'.format(split)) as input_file:
         dataset = json.load(input_file)
     for claim_id, claim in enumerate(dataset):
@@ -104,7 +104,7 @@ def generate_explanations_using_gpt2(split):
         if claim_id % 20 == 0:  # bug fix for slow down in generation
             tf.reset_default_graph()
             session = gpt2.start_tf_sess()
-            gpt2.load_gpt2(session, run_name='simple', multi_gpu=True)
+            gpt2.load_gpt2(session, run_name='simple')
 
     tf.reset_default_graph()
 
