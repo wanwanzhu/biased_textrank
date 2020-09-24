@@ -65,7 +65,7 @@ def generate_explanations_using_gpt2(split):
             print('Skipping item #{} because it already has a meaningful generated explanation.'.format(claim_id))
             continue
 
-        summary_size = min(20, len(get_sentences(claim['statements']) - 2))
+        summary_size = min(20, len(get_sentences(claim['statements'])) - 2)
         summary_doesnt_fit = True
         while summary_doesnt_fit:
             try:
@@ -142,5 +142,5 @@ def prepare_training_data_for_gpt2():
 if __name__ == '__main__':
     split = sys.argv[1] if len(sys.argv) > 1 else ''
     # prepare_training_data_for_gpt2()
-    fine_tune_gpt2()
+    # fine_tune_gpt2()
     generate_explanations_using_gpt2(split)
