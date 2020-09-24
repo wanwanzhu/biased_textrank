@@ -75,6 +75,7 @@ def generate_explanations_using_gpt2(split):
                     summary_doesnt_fit = False
                 elif summary_size <= 10:
                     claim['generated_justification_gpt2'] = ''
+                    summary_doesnt_fit = False
                 else:
                     print('Generated explanation for item #{} was not meaningful.'.format(claim_id))
                     raise ValueError(
