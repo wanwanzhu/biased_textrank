@@ -18,8 +18,12 @@ def almost_the_same(a, b):
     return len_ratio >= 0.9 and similarity > 90
 
 
+def is_mostly_alphabetical(text):
+    return len([c for c in text if c.isalpha()])/len(text) > 0.5
+
+
 def generated_text_is_meaningful(text, generation_prefix):
-    return text != '' and not text.isspace() and not almost_the_same(text, generation_prefix)
+    return text != '' and not text.isspace() and len(text) > 100 and is_mostly_alphabetical(text) and not almost_the_same(text, generation_prefix)
 
 
 def get_generation_prefix(article, claim_statement):
@@ -97,7 +101,7 @@ def generate_explanations_using_gpt2(split):
                 statements = statements_summary
                 summary_size -= 2
 
-        with open('../data/liar/_{}.json'.format(split), 'w') as f:
+        with open('../data/liar/clean_{}.json'.format(split), 'w') as f:
             f.write(json.dumps(dataset))
         print('results for {} set saved. Data points summarized so far: {}'.format(split, data_points_summarized))
 
@@ -109,7 +113,7 @@ def generate_explanations_using_gpt2(split):
 
     tf.reset_default_graph()
 
-    with open('../data/liar/_{}.json'.format(split), 'w') as f:
+    with open('../data/liar/clean_{}.json'.format(split), 'w') as f:
         f.write(json.dumps(dataset))
 
     print('all explanations generated, total summarized are: {}.'.format(data_points_summarized))
