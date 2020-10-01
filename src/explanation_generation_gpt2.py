@@ -144,8 +144,26 @@ def prepare_training_data_for_gpt2():
         f.write(train_str)
 
 
+def clean_generated_explanations(split):
+    with open('../data/liar/clean_{}.json'.format(split)) as dataset_file:
+        dataset = json.load(dataset_file)
+
+    print("Data loading completed.")
+
+    for item in dataset:
+        if 'generated_justification_gpt2' in item and '<|EXPLANATION|>:' in item['generated_justification_gpt2']:
+            after_explanation_token = item['generated_justification_gpt2'].split("<|EXPLANATION|>:",1)[1].strip()
+            item['generated_justification_gpt2'] = after_explanation_token
+
+    with open('../data/liar/clean_{}.json'.format(split), 'w') as f:
+        f.write(json.dumps(dataset))
+
+    print('Results saved for {} split.'.format(split))
+
+
 if __name__ == '__main__':
     split = sys.argv[1] if len(sys.argv) > 1 else ''
     # prepare_training_data_for_gpt2()
     # fine_tune_gpt2()
     generate_explanations_using_gpt2(split)
+    clean_generated_explanations(split)
