@@ -44,7 +44,7 @@ def generate_explanation(article, question, session):
     while True:
         generated_explanations = gpt2.generate(session, prefix=generation_prefix, truncate='<|endoftext|>', length=80,
                                                include_prefix=False, temperature=temperature, return_as_list=True, batch_size=2,
-                                               nsamples=2, run_name='simple')
+                                               nsamples=2, run_name='simple2')
         for generated_explanation in generated_explanations:
             if generated_text_is_meaningful(generated_explanation, generation_prefix) or temperature >= 0.8:
                 print(generated_explanation)
@@ -57,13 +57,13 @@ def fine_tune_gpt2():
     MODEL_NAME = '355M'
     TRAINING_DATA_PATH = '../data/liar/gpt2_training_data.txt'
     session = gpt2.start_tf_sess()
-    gpt2.finetune(session, TRAINING_DATA_PATH, model_name=MODEL_NAME, steps=400, run_name='simple')
+    gpt2.finetune(session, TRAINING_DATA_PATH, model_name=MODEL_NAME, steps=1000, run_name='simple2')
 
 
 def generate_explanations_using_gpt2(split):
     data_points_summarized = 0
     session = gpt2.start_tf_sess()
-    gpt2.load_gpt2(session, run_name='simple')
+    gpt2.load_gpt2(session, run_name='simple2')
     dataset = get_liar_data(split)
     for claim_id, claim in enumerate(dataset):
         statements = claim['statements']
@@ -112,7 +112,7 @@ def generate_explanations_using_gpt2(split):
         if claim_id % 20 == 0:  # bug fix for slow down in generation
             tf.reset_default_graph()
             session = gpt2.start_tf_sess()
-            gpt2.load_gpt2(session, run_name='simple')
+            gpt2.load_gpt2(session, run_name='simple2')
 
     tf.reset_default_graph()
 
@@ -136,7 +136,7 @@ def generate_training_string(claims):
 
 
 def prepare_training_data_for_gpt2():
-    dataset = get_liar_data('train')
+    dataset = get_liar_data('train2')
 
     random.Random(2017).shuffle(dataset)
 
