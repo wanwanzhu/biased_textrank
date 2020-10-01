@@ -70,7 +70,7 @@ def html_decode(s):
 
 
 def clean_liar_data(split):
-    with open('../data/liar/{}2.jsonl'.format(split)) as test_file:
+    with open('../../QAforMisinformation/data/liar/{}2.jsonl'.format(split)) as test_file:
         data_set_lines = list(test_file)
 
     data_set = [json.loads(line) for line in data_set_lines]
@@ -79,7 +79,7 @@ def clean_liar_data(split):
     for i, item in enumerate(data_set):
         file_name = item['json_file_id']
         try:
-            with open('../data/liar/statements/{}'.format(file_name), encoding='utf-8') as statements_file:
+            with open('../../QAforMisinformation/data/liar/statements/{}'.format(file_name), encoding='utf-8') as statements_file:
                 # item['statements'] = json.load(statements_file)['ruling_comments']
                 item['statements'] = remove_html_tags(json.load(statements_file)['ruling_comments'])
             item['statements'] = ' '.join(item['statements'].split())
@@ -92,9 +92,13 @@ def clean_liar_data(split):
                     ruling_token = possible_ruling_token
                     break
             if ruling_token:
-                item['new_justification'] = item['statements'].split(ruling_token)[1].strip()
+                split_statements = item['statements'].split(ruling_token)
+                item['new_justification'] = split_statements[1].strip()
+                item['statements'] = split_statements[0].strip()
             else:
-                item['new_justification'] = ' '.join(get_sentences(item['statements'])[-5:])
+                statement_sentences = get_sentences(item['statements'])
+                item['new_justification'] = ' '.join(statement_sentences[-5:])
+                item['statements'] = ' '.join(statement_sentences[:-5])
         except:
             problematic_datapoints_index.append(i)
             print("Wrong file or file path for {}".format(file_name))
@@ -103,7 +107,7 @@ def clean_liar_data(split):
         del data_set[i]
 
     print('saving cleaned {} set file...'.format(split))
-    with open('../data/liar/clean_{}.json'.format(split), 'w') as f:
+    with open('../data/liar/clean_{}2.json'.format(split), 'w') as f:
         f.write(json.dumps(data_set))
 
     return data_set
@@ -200,6 +204,6 @@ def ablation_study(split):
 
 
 if __name__ == "__main__":
-    # generate_textrank_explanations('val')
-    # evaluate_generated_explanations('val')
-    ablation_study('val')
+    generate_textrank_explanations('val2')
+    evaluate_generated_explanations('val2')
+    # ablation_study('val')

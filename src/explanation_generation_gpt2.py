@@ -9,7 +9,11 @@ import gpt_2_simple as gpt2
 import tensorflow as tf
 
 from biased_summarization import select_top_k_texts_preserving_order, biased_textrank, get_sbert_embedding
-from explanation_generation import get_sentences
+from explanation_generation import get_sentences, get_liar_data
+from rouge import Rouge
+import numpy as np
+
+rouge = Rouge()
 
 
 def almost_the_same(a, b):
@@ -60,8 +64,7 @@ def generate_explanations_using_gpt2(split):
     data_points_summarized = 0
     session = gpt2.start_tf_sess()
     gpt2.load_gpt2(session, run_name='simple')
-    with open('../data/liar/clean_{}.json'.format(split)) as input_file:
-        dataset = json.load(input_file)
+    dataset = get_liar_data(split)
     for claim_id, claim in enumerate(dataset):
         statements = claim['statements']
 
@@ -133,8 +136,7 @@ def generate_training_string(claims):
 
 
 def prepare_training_data_for_gpt2():
-    with open('../data/liar/clean_train.json') as input_file:
-        dataset = json.load(input_file)
+    dataset = get_liar_data('train')
 
     random.Random(2017).shuffle(dataset)
 
@@ -145,8 +147,7 @@ def prepare_training_data_for_gpt2():
 
 
 def clean_generated_explanations(split):
-    with open('../data/liar/clean_{}.json'.format(split)) as dataset_file:
-        dataset = json.load(dataset_file)
+    dataset = get_liar_data(split)
 
     print("Data loading completed.")
 
@@ -161,9 +162,34 @@ def clean_generated_explanations(split):
     print('Results saved for {} split.'.format(split))
 
 
+def evaluate_generated_explanations(split):
+    dataset = get_liar_data(split)
+    dataset = [claim for claim in dataset if len(get_sentences(claim['statements'])) > 3]
+
+    rouge1 = []
+    rouge2 = []
+    rougel = []
+    for claim in dataset:
+        if 'generated_justification_gpt2' in claim and claim['generated_justification_gpt2'] == '':
+            print('poop')
+            continue
+
+        reference = claim['new_justification']
+        explanation = claim['generated_justification_gpt2']
+        score = rouge.get_scores(explanation, reference)
+        rouge1.append(score[0]['rouge-1']['f'])
+        rouge2.append(score[0]['rouge-2']['f'])
+        rougel.append(score[0]['rouge-l']['f'])
+
+    print('Average ROUGE-1: {}'.format(np.mean(rouge1)))
+    print('Average ROUGE-2: {}'.format(np.mean(rouge2)))
+    print('Average ROUGE-l: {}'.format(np.mean(rougel)))
+
+
 if __name__ == '__main__':
     split = sys.argv[1] if len(sys.argv) > 1 else ''
-    # prepare_training_data_for_gpt2()
-    # fine_tune_gpt2()
+    prepare_training_data_for_gpt2()
+    fine_tune_gpt2()
     generate_explanations_using_gpt2(split)
     clean_generated_explanations(split)
+    evaluate_generated_explanations(split)
