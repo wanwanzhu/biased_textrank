@@ -128,7 +128,12 @@ def generate_textrank_explanations(split):
         statements_embeddings = get_sbert_embedding(statements)
         bias = claim['claim']
         bias_embedding = get_sbert_embedding(bias)
-        ranking = biased_textrank(statements_embeddings, bias_embedding)
+        try:
+            ranking = biased_textrank(statements_embeddings, bias_embedding)
+        except:
+            print(statements)
+            print('--------------------')
+            print(bias)
         claim['generated_justification_biased'] = ' '.join(select_top_k_texts_preserving_order(statements, ranking, 4))
 
     print('saving generated {} set file...'.format(split))
