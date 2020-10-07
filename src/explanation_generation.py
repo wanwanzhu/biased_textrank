@@ -2,7 +2,8 @@ import json
 from distutils.command.clean import clean
 
 import nltk
-from biased_summarization import select_top_k_texts_preserving_order, biased_textrank, get_sbert_embedding, biased_textrank_ablation
+from biased_summarization import select_top_k_texts_preserving_order, biased_textrank, get_sbert_embedding, \
+    biased_textrank_ablation, vcosine
 from rouge import Rouge
 import numpy as np
 
@@ -129,7 +130,7 @@ def generate_textrank_explanations(split):
         bias = claim['claim']
         bias_embedding = get_sbert_embedding(bias)
         try:
-            ranking = biased_textrank(statements_embeddings, bias_embedding)
+            ranking = biased_textrank(statements_embeddings, bias_embedding, biased=False)
         except:
             print(statements)
             print('--------------------')
@@ -208,7 +209,23 @@ def ablation_study(split):
         f.write(json.dumps(rouge_results))
 
 
+def generate_embedding_similarity_explanations(split):
+    dataset = get_liar_data(split)
+
+    for claim in dataset:
+        statements = get_sentences(claim['statements'])
+        statements_embeddings = get_sbert_embedding(statements)
+        bias = claim['claim']
+        bias_embedding = get_sbert_embedding(bias)
+        similarities = vcosine(bias_embedding, statements_embeddings)
+        claim['generated_justification_embedding_similarity'] = ' '.join(select_top_k_texts_preserving_order(statements, similarities, 4))
+
+    print('saving generated {} set file...'.format(split))
+    with open('../data/liar/clean_{}.json'.format(split), 'w') as f:
+        f.write(json.dumps(dataset))
+
+
 if __name__ == "__main__":
-    generate_textrank_explanations('val2')
-    evaluate_generated_explanations('val2')
+    generate_embedding_similarity_explanations('test2')
+    evaluate_generated_explanations('test2')
     # ablation_study('val')

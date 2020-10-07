@@ -170,6 +170,8 @@ def evaluate_generated_explanations(split):
     rouge2 = []
     rougel = []
     for claim in dataset:
+        if 'generated_justification_gpt2' not in claim:
+            continue
         if 'generated_justification_gpt2' in claim and claim['generated_justification_gpt2'] == '':
             print('poop')
             continue
