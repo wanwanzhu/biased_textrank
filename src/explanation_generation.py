@@ -222,7 +222,7 @@ def generate_embedding_similarity_explanations(split):
         try:
             similarities = vcosine(bias_embedding, statements_embeddings)
             claim['generated_justification_embedding_similarity'] = ' '.join(
-                select_top_k_texts_preserving_order(statements, similarities, 4))
+                select_top_k_texts_preserving_order(statements, similarities[0], 4))
         except:
             print(statements)
             print('--------------------')
@@ -234,6 +234,6 @@ def generate_embedding_similarity_explanations(split):
 
 
 if __name__ == "__main__":
-    # generate_embedding_similarity_explanations('test2')
+    generate_embedding_similarity_explanations('test2')
     evaluate_generated_explanations('test2')
     # ablation_study('val')
