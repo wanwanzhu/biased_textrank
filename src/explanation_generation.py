@@ -217,8 +217,14 @@ def generate_embedding_similarity_explanations(split):
         statements_embeddings = get_sbert_embedding(statements)
         bias = claim['claim']
         bias_embedding = get_sbert_embedding(bias)
-        similarities = vcosine(bias_embedding, statements_embeddings)
-        claim['generated_justification_embedding_similarity'] = ' '.join(select_top_k_texts_preserving_order(statements, similarities, 4))
+        try:
+            similarities = vcosine(bias_embedding, statements_embeddings)
+            claim['generated_justification_embedding_similarity'] = ' '.join(
+                select_top_k_texts_preserving_order(statements, similarities, 4))
+        except:
+            print(statements)
+            print('--------------------')
+            print(bias)
 
     print('saving generated {} set file...'.format(split))
     with open('../data/liar/clean_{}.json'.format(split), 'w') as f:
