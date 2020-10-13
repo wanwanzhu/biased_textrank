@@ -173,6 +173,8 @@ def ablation_study(split):
     summaries = [{} for item in dataset]
     for i, claim in enumerate(dataset):
         statements = get_sentences(claim['statements'])
+        if len(statements) < 4:
+            continue
         statements_embeddings = get_sbert_embedding(statements)
         bias = claim['claim']
         bias_embedding = get_sbert_embedding(bias)
@@ -195,6 +197,8 @@ def ablation_study(split):
             rouge2 = []
             rougel = []
             for i, claim in enumerate(dataset):
+                if len(get_sentences(claim['statements'])) < 4:
+                    continue
                 reference = claim['new_justification']
                 explanation = summaries[i][similarity_threshold][damping_factor]
                 score = rouge.get_scores(explanation, reference)
