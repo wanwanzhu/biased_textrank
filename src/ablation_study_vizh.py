@@ -33,13 +33,13 @@ def main():
             [summaries[similarity_threshold][damping_factor]['republican'][2] for similarity_threshold in summaries]
 
         axs[0].plot(similarity_thresholds, explanations_rouge1, 'o-', label='DF={}'.format(damping_factor))
-        axs[0].set_yticks(np.arange(0.33, 0.43, step=0.01))
+        axs[0].set_yticks(np.arange(0.29, 0.39, step=0.01))
 
         axs[1].plot(similarity_thresholds, dem_rouge1, 'o-', label='DF={}'.format(damping_factor))
-        axs[1].set_yticks(np.arange(0.33, 0.43, step=0.01))
+        axs[1].set_yticks(np.arange(0.29, 0.39, step=0.01))
 
         axs[2].plot(similarity_thresholds, rep_rouge1, 'o-', label='DF={}'.format(damping_factor))
-        axs[2].set_yticks(np.arange(0.33, 0.43, step=0.01))
+        axs[2].set_yticks(np.arange(0.29, 0.39, step=0.01))
 
         axs[i].set(xlabel='Similarity Threshold')
 
