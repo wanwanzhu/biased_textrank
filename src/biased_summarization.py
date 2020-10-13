@@ -10,6 +10,7 @@ from scipy.spatial import distance
 from sentence_transformers import SentenceTransformer
 
 sbert = SentenceTransformer('bert-base-nli-mean-tokens')
+# sbert = SentenceTransformer('bert-base-nli-mean-tokens', device='cuda:1') uncomment for the gpt-2 generation
 rouge = Rouge()
 
 
