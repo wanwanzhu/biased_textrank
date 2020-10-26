@@ -44,7 +44,7 @@ def task3():
         bias = cluster['viewpoint']
         references = cluster['references']
 
-        doc_sentences = [sent for sent in get_sentences(doc) for doc in docs]
+        doc_sentences = [sent for doc in docs for sent in get_sentences(doc)]
         doc_sentence_embeddings = get_sbert_embedding(doc_sentences)
         bias_embedding = get_sbert_embedding(bias)
         ranks = biased_textrank(doc_sentence_embeddings, bias_embedding, similarity_threshold=0.7)
