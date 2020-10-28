@@ -5,13 +5,14 @@ import string
 import json
 from os import listdir
 from os.path import isfile, join
+from collections import Counter
 
 import gensim
 import numpy as np
 import nltk
 # from nltk.stem import PorterStemmer
 
-from bias_words import word_list as bias_words_list
+# from bias_words import word_list as bias_words_list
 
 # Load Google's pre-trained Word2Vec model.
 print('loading Google word2vec vectors...')
@@ -102,7 +103,7 @@ def clean_and_tokenize(datum):
     stopwords = nltk.corpus.stopwords.words('english')
     tokens = nltk.word_tokenize(datum_cleaned)
     # tokens_cleaned = [stemmer.stem(token) for token in tokens if token not in stopwords and token != 'rt']
-    tokens_cleaned = [token for token in tokens if token not in stopwords and token not in ['rt', 'NUM'] and token in w2v_model]
+    tokens_cleaned = [token for token in tokens if token not in stopwords and token not in ['*', '=='] and token in w2v_model]
     return tokens_cleaned
 
 
@@ -122,7 +123,7 @@ def save_as_json(data, filename):
 
 
 def main():
-    input_directory = '../data/'
+    input_directory = '/Users/zehuali/Downloads/textFiles/'
     load_precomputed = sys.argv[1] if len(sys.argv) > 1 else None
 
     token_dist = nltk.FreqDist()
@@ -135,27 +136,37 @@ def main():
         cooccurrence_matrix = {}
 
         # for all files in the dataset:
-        for filename in get_filenames_in_directory(input_directory):
-            if 'csv' not in filename:
-                continue
-            tokens = []
-            print('processing file: {}'.format(filename))
-            #  read tweet file
-            filepath = input_directory + filename
-            with gzip.open(filepath, 'rt') as f:
-                raw_tweets = f.readlines()
-
+        for i in range(4918684):
+            filename = str(i)
+            while len(filename) < 7:
+                filename = '0' + filename
+            filename = '{}{}'.format(input_directory, filename)
+            with open(filename, 'r') as f:
+                article = f.read()
+                f.close()
+            
             #   clean its data-- using Scott's script and removing stop words and things like that
             #   build up on existing co-occurrence matrix
             #   add the tokens to the existing tokens set
-            tweets = [re.split(r'\t+', raw_tweet)[5] for raw_tweet in raw_tweets]
-            tweets_tokenized = [clean_and_tokenize(tweet) for tweet in tweets]
+            article_tokenized = clean_and_tokenize(article)
 
-            for tweet_tokenized in tweets_tokenized:
-                calculate_cooccurrence_matrix(cooccurrence_matrix, tweet_tokenized)
-                tokens.extend(tweet_tokenized)
+            if i % 5000 == 0:
+                print(len(token_dist), len(cooccurrence_matrix))
+                token_dist = nltk.FreqDist(Counter(**dict(token_dist.most_common(200000))))
+                tokens = list(cooccurrence_matrix.keys())
+                for token in tokens:
+                    if token not in token_dist:
+                        del cooccurrence_matrix[token]
+                        continue
+                    for adj_token in list(cooccurrence_matrix[token].keys()):
+                        if adj_token not in token_dist:
+                            del cooccurrence_matrix[token][adj_token]
+                print(len(token_dist), len(cooccurrence_matrix))
+                print('processing file: {}'.format(filename))
 
-            token_dist.update(tokens)
+            calculate_cooccurrence_matrix(cooccurrence_matrix, article_tokenized)
+
+            token_dist.update(article_tokenized)
 
         # chopping down the uncommon tokens and removing uncommon words from the co-occurrence matrix
         print('making things small enough to process in memory...')
@@ -181,18 +192,18 @@ def main():
     save_as_json(dict(sorted(zip(tokens, ranks.tolist()), key=lambda pair: pair[1])), '../results/normal_textrank')
 
     # for each bias_term:
-    for bias_word in bias_words_list:
-        bias_word = bias_word.lower()
-        if bias_word not in w2v_model:
-            print('no embeddings for {}, skipping bias word.'.format(bias_word))
-            continue
+    # for bias_word in bias_words_list:
+    #     bias_word = bias_word.lower()
+    #     if bias_word not in w2v_model:
+    #         print('no embeddings for {}, skipping bias word.'.format(bias_word))
+    #         continue
 
-        #   run biased_textrank and gather top n (e.g. n = 50) results
-        print('running biased textrank for {}'.format(bias_word))
-        # bias_word = stemmer.stem(bias_word)
-        biased_ranks, _ = textrank(tokens, bias_word, cooccurrence_matrix, biased=True)
-        save_as_json(dict(sorted(zip(tokens, biased_ranks.tolist()), key=lambda pair: pair[1])),
-                     '../results/{}'.format(bias_word))
+    #     #   run biased_textrank and gather top n (e.g. n = 50) results
+    #     print('running biased textrank for {}'.format(bias_word))
+    #     # bias_word = stemmer.stem(bias_word)
+    #     biased_ranks, _ = textrank(tokens, bias_word, cooccurrence_matrix, biased=True)
+    #     save_as_json(dict(sorted(zip(tokens, biased_ranks.tolist()), key=lambda pair: pair[1])),
+    #                  '../results/{}'.format(bias_word))
 
 
 if __name__ == '__main__':
