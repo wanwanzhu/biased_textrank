@@ -2,6 +2,10 @@
 This repository contains code and data for our paper: 
 **Biased textrank: Unsupervised Graph-Based Content Extraction: Ashkan Kazemi, Veŕonica Pérez-Rosas, and Rada Mihalcea. COLING 2020**.
 
+Biased TextRank is an unsupervised, graph-based method for extracting content from text with a given focus. In this repository,
+you can find code for two experiments described in our paper; 1) focused summarization of US presidential debates and 2)
+supporting explanation extraction for fact-checking of political claims. 
+
 # Requirements
 To install the required packages for running the codes on your machine, please run ``pip install -r requirements.txt``
 first. 
