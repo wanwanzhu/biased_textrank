@@ -15,4 +15,5 @@ first.
 for the LIAR-PLUS dataset. The ``/data/us-presidential-debates/``  directory contains the novel presidential debates 
 dataset described in the paper.
 * ``/src/`` This directory contains implementations of the described experiments in the paper. To run the *biased summarization*
-experiment, run ``/src/biased_summarization.py``. For the explanation extraction experiment, run ``explanation_generation.py``.  
+experiment, run ``/src/biased_summarization.py``. For the explanation extraction experiment, run 
+``/src/explanation_generation.py``.  
