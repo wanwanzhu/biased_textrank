@@ -238,6 +238,6 @@ def generate_embedding_similarity_explanations(split):
 
 
 if __name__ == "__main__":
-    # generate_embedding_similarity_explanations('test2')
-    # evaluate_generated_explanations('test2')
-    ablation_study('val2')
+    generate_embedding_similarity_explanations('test2')
+    evaluate_generated_explanations('test2')
+    ablation_study('test2')

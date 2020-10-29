@@ -355,4 +355,5 @@ def calculate_rouge_score(gold_standards, summaries):
 
 
 if __name__ == '__main__':
+    main()
     ablation_study()
