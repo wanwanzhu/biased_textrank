@@ -14,7 +14,7 @@ first.
 * ``/data/``: This directory contains the two datasets used in the experiments. The ``/data/liar/`` directory contains files
 for the LIAR-PLUS dataset. The ``/data/us-presidential-debates/``  directory contains the novel presidential debates 
 dataset described in the paper.
-* ``/src/`` This directory contains implementations of the described experiments in the paper. To run the *biased summarization*
+* ``/src/``: This directory contains implementations of the described experiments in the paper. To run the *biased summarization*
 experiment, run ``/src/biased_summarization.py``. For the *explanation extraction* experiment, run 
 ``/src/explanation_generation.py``. 
 
