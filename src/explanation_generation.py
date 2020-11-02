@@ -150,10 +150,10 @@ def evaluate_generated_explanations(split):
     rouge2 = []
     rougel = []
     for claim in dataset:
-        if 'generated_justification_embedding_similarity' not in claim:
+        if 'generated_justification_biased' not in claim:
             continue
         reference = claim['new_justification']
-        explanation = claim['generated_justification_embedding_similarity']
+        explanation = claim['generated_justification_biased']
         score = rouge.get_scores(explanation, reference)
         rouge1.append(score[0]['rouge-1']['f'])
         rouge2.append(score[0]['rouge-2']['f'])
@@ -238,6 +238,6 @@ def generate_embedding_similarity_explanations(split):
 
 
 if __name__ == "__main__":
-    generate_embedding_similarity_explanations('test2')
+    generate_textrank_explanations('test2')
     evaluate_generated_explanations('test2')
     ablation_study('test2')
